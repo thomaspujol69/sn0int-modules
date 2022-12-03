@@ -4,13 +4,18 @@
 -- License: GPL-3.0
 
 function run(arg)
-    local handle = io.popen("nmap -R --noninteractive -sn -oG - " .. arg['value'])
-    local result = handle:read("*a")
-    handle:close()
-    local domain = string.match(result, arg['value'] .. " \((%a+)\) \tStatus")
-    if domain~="" then
-        db_add('domain', {
-            value=domain,
-        })
+    local session = http_mksession()
+    local req = http_request(session, 'GET', 'http://127.0.0.1:5000/getDNS', {
+        query={
+            ip=arg['value'],
+        }
+    })
+    local r = http_send(req)
+    if last_err() then return end
+    if r['status'] ~= 200 then
+        return 'http error: ' .. r['status']
     end
+    db_add('domain', {
+        value=r['text'],
+    })
 end
